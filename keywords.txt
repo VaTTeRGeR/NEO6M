@@ -1,0 +1,32 @@
+#######################################
+# Syntax Coloring Map for RFM69
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+NEO6M	KEYWORD2
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+setup	KEYWORD2
+update	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+
+#######################################
+# Variables/Volatiles (LITERAL2)
+#######################################
+LONGITUDE		LITERAL2
+LATITUDE		LITERAL2
+HEIGHT_OVER_SEA	LITERAL2
+H_ACCURACY		LITERAL2
+V_ACCURACY		LITERAL2

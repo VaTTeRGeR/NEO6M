@@ -1,0 +1,12 @@
+{
+  "name": "NEO6M",
+  "keywords": "gps, ubx, serial, position,neo6m,ublox",
+  "description": "Get lat/lon/height/acc from the neo6m with less overhead",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/"
+  },
+  "frameworks": "arduino",
+  "platforms": "atmelavr"
+}
