@@ -1,7 +1,7 @@
 #include <neo6m.h>
 
 void NEO6M::setup() {
-	NEO6M_Serial.begin(9600);
+	_serial.begin(9600);
 
 	delay(25);
   
@@ -11,8 +11,8 @@ void NEO6M::setup() {
 
 	delay(25);
   
-	NEO6M_Serial.end();
-	NEO6M_Serial.begin(115200);
+	_serial.end();
+	_serial.begin(115200);
   
 	delay(25);
 
@@ -40,8 +40,8 @@ void NEO6M::setup() {
 }
 
 void NEO6M::update() {
-  while (NEO6M_Serial.available() > 0) {
-    update_parser(NEO6M_Serial.read());
+  while (_serial.available() > 0) {
+    update_parser(_serial.read());
   }
 }
 
@@ -82,16 +82,24 @@ void NEO6M::update_parser(byte b) {
         _data[_pos - POSLLH_DATA_BEGIN] = b;
         _pos++;
       } else {
-		LONGITUDE		= readS4(_data + 4);	//Longitude * 10^+7	[deg]
-		LATITUDE		= readS4(_data + 8);	//Latitude  * 10^+7	[deg]
-		HEIGHT_OVER_SEA	= readS4(_data + 16);	//Height above mean sea-level	[mm]
-		H_ACCURACY		= readU4(_data + 20);	//Horizontal accuracy			[mm]
-		V_ACCURACY		= readU4(_data + 24);	//Vertical accuracy				[mm]
+		LONGITUDE		= ((float)readS4(_data +  4))/10000000.0;	//Longitude [deg]
+		LATITUDE		= ((float)readS4(_data +  8))/10000000.0;	//Latitude  [deg]
+		HEIGHT_OVER_SEA	= ((float)readU4(_data + 16))/1000.0;	//Height above mean sea-level	[m]
+		H_ACCURACY		= ((float)readU4(_data + 20))/1000.0;	//Horizontal accuracy			[m]
+		V_ACCURACY		= ((float)readU4(_data + 24))/1000.0;	//Vertical accuracy				[m]
 		
         _pos = 0;
       }
     break;
   }
+}
+
+bool NEO6M::is_locked(float threshold) {
+	return (H_ACCURACY > 0.0 && H_ACCURACY < threshold);
+}
+
+bool NEO6M::is_locked(int threshold) {
+	return (H_ACCURACY > 0.0 && H_ACCURACY < ((float)threshold));
 }
 
 uint32_t NEO6M::readU4(byte * b) {
@@ -124,9 +132,9 @@ void NEO6M::calcChecksum(byte *payload, byte payloadSize) {
 
 void NEO6M::sendUBX(byte *msg, byte msgLength) {
 	for(int i = 0; i < msgLength; i++) {
-		NEO6M_Serial.write(msg[i]);
-		NEO6M_Serial.flush();
+		_serial.write(msg[i]);
+		_serial.flush();
 	}
-	NEO6M_Serial.println();
-	NEO6M_Serial.flush();
+	_serial.println();
+	_serial.flush();
 }

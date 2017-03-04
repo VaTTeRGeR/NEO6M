@@ -8,27 +8,32 @@
 //[0...1 , 2...3, 4...5 , 6...33 , 34...35 ]
 //Little Endian
 
-#if not defined (NEO6M_Serial)
-	#define NEO6M_Serial Serial4
+#define _serial Serial4
+
+#if not defined _serial
+	#error You need to define a Serial class to use in "neo6m.h"
 #endif
 
 class NEO6M {
 	public:
 		NEO6M(){
-			LONGITUDE		= 0;
-			LATITUDE		= 0;
-			HEIGHT_OVER_SEA	= 0;
-			H_ACCURACY		= 0;
-			V_ACCURACY		= 0;
+			LONGITUDE		= 0.0;
+			LATITUDE		= 0.0;
+			HEIGHT_OVER_SEA	= 0.0;
+			H_ACCURACY		= 0.0;
+			V_ACCURACY		= 0.0;
 			_pos			= 0;
 		}
 		
-		int32_t		LONGITUDE, LATITUDE, HEIGHT_OVER_SEA;
-		uint32_t	H_ACCURACY, V_ACCURACY;
+		float	LONGITUDE, LATITUDE;
+		float	HEIGHT_OVER_SEA;
+		float	H_ACCURACY, V_ACCURACY;
 		
 		void setup();
 		void update();
 		void update_parser(byte b);
+		bool is_locked(float threshold);
+		bool is_locked(int threshold);
 		
 	private:
 		const static byte POSLLH_MESSAGE_SIZE = 36;
