@@ -6,6 +6,7 @@ The minimal example project "SimpleGPS" shows you how to use the library.
 It is important that you edit "neo6m.h" before you use the library to set which serial port is used!
 
 To use SerialX set this (replace X with any number):
->#define _serial SerialX
+
+```#define _serial SerialX```
 
 Thats all!
