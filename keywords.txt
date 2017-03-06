@@ -14,8 +14,9 @@ NEO6M	KEYWORD2
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
-setup	KEYWORD2
-update	KEYWORD2
+setup		KEYWORD2
+update		KEYWORD2
+is_locked	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
@@ -30,3 +31,13 @@ LATITUDE		LITERAL2
 HEIGHT_OVER_SEA	LITERAL2
 H_ACCURACY		LITERAL2
 V_ACCURACY		LITERAL2
+SPEED			LITERAL2
+ANGLE			LITERAL2
+LAT_HOME_E7		LITERAL2
+LON_HOME_E7		LITERAL2
+LAT_HOME		LITERAL2
+LON_HOME		LITERAL2
+HOME_DX			LITERAL2
+HOME_DY			LITERAL2
+HOME_DIST		LITERAL2
+HOME_ANGLE			LITERAL2

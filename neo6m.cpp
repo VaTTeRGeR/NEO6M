@@ -40,58 +40,97 @@ void NEO6M::setup() {
 }
 
 void NEO6M::update() {
-  while (_serial.available() > 0) {
-    update_parser(_serial.read());
-  }
+	while (_serial.available() > 0) {
+		update_parser(_serial.read());
+	}
 }
 
 void NEO6M::update_parser(byte b) {
-  switch (_pos) {
-    case 0:
-      if(b == 0xB5) _pos++;
-      else _pos = 0;
-    break;
-    
-    case 1:
-      if(b == 0x62) _pos++;
-      else _pos = 0;
-    break;
-    
-    case 2:
-      if(b == 0x01) _pos++;
-      else _pos = 0;
-    break;
-    
-    case 3:
-      if(b == 0x02) _pos++;
-      else _pos = 0;
-    break;
-    
-    case 4:
-      if(b == 28) _pos++;
-      else _pos = 0;
-    break;
-    
-    case 5:
-      if(b == 0) _pos++;
-      else _pos = 0;
-    break;
-    
-    default:
-      if(_pos >= POSLLH_DATA_BEGIN && _pos <= POSLLH_DATA_END) {
-        _data[_pos - POSLLH_DATA_BEGIN] = b;
-        _pos++;
-      } else {
-		LONGITUDE		= ((float)readS4(_data +  4))/10000000.0;	//Longitude [deg]
-		LATITUDE		= ((float)readS4(_data +  8))/10000000.0;	//Latitude  [deg]
-		HEIGHT_OVER_SEA	= ((float)readU4(_data + 16))/1000.0;	//Height above mean sea-level	[m]
-		H_ACCURACY		= ((float)readU4(_data + 20))/1000.0;	//Horizontal accuracy			[m]
-		V_ACCURACY		= ((float)readU4(_data + 24))/1000.0;	//Vertical accuracy				[m]
-		
-        _pos = 0;
-      }
-    break;
-  }
+	switch (_pos) {
+		case 0:
+			if(b == 0xB5) _pos++;
+			else _pos = 0;
+		break;
+
+		case 1:
+			if(b == 0x62) _pos++;
+			else _pos = 0;
+		break;
+
+		case 2:
+			if(b == 0x01) _pos++;
+			else _pos = 0;
+		break;
+
+		case 3:
+			if(b == 0x02) _pos++;
+			else _pos = 0;
+		break;
+
+		case 4:
+			if(b == 28) _pos++;
+			else _pos = 0;
+		break;
+
+		case 5:
+			if(b == 0) _pos++;
+			else _pos = 0;
+		break;
+
+		default:
+			if(_pos >= POSLLH_DATA_BEGIN && _pos <= POSLLH_DATA_END) {
+				_data[_pos - POSLLH_DATA_BEGIN] = b;
+				_pos++;
+			} else {
+				LONGITUDE_E7	= readS4(_data + 4);					//Longitude						[deg*10e7]
+				LATITUDE_E7		= readS4(_data + 8);					//Latitude						[deg*10e7]
+				HEIGHT_OVER_SEA	= ((float)readU4(_data + 16))/1000.0;	//Height above mean sea-level	[m]
+				H_ACCURACY		= ((float)readU4(_data + 20))/1000.0;	//Horizontal accuracy			[m]
+				V_ACCURACY		= ((float)readU4(_data + 24))/1000.0;	//Vertical accuracy				[m]
+
+				float lat_tmp = LATITUDE;
+				float lon_tmp = LONGITUDE;
+				
+				LATITUDE	= ((float)LATITUDE_E7) /10000000.0;		//Latitude						[deg]
+				LONGITUDE	= ((float)LONGITUDE_E7)/10000000.0;		//Longitude						[deg]
+				
+				lat_tmp = latitudeToMeters (LATITUDE  - lat_tmp);
+				lon_tmp = longitudeToMeters(LONGITUDE - lon_tmp);
+				
+				float speed_new = sqrt(lat_tmp*lat_tmp + lon_tmp*lon_tmp) * 4/*HZ*/ * 3.6; //[km/h]
+
+				SPEED = 0.25*SPEED + 0.75*speed_new;
+				ANGLE = atan2(lon_tmp, lat_tmp) * 180.0/PI;
+				
+				if(_home_set > 0 && is_locked(3.0)) {
+					if(LAT_HOME_E7 == 0 && LON_HOME_E7 == 0) {
+						LAT_HOME_E7 = LATITUDE_E7;
+						LON_HOME_E7 = LONGITUDE_E7;
+					} else {
+						LAT_HOME_E7 = (LAT_HOME_E7*3)/4 + LATITUDE_E7 /4 + 1;
+						LON_HOME_E7 = (LON_HOME_E7*3)/4 + LONGITUDE_E7/4 + 1;
+						
+						LAT_HOME = ((float)LAT_HOME_E7)/10000000.0;
+						LON_HOME = ((float)LON_HOME_E7)/10000000.0;
+						
+						_home_set--;
+					}
+				} else if(_home_set == 0){
+					float d_lat = LATITUDE  - LAT_HOME;
+					float d_lon = LONGITUDE - LON_HOME;
+					
+					HOME_ANGLE = atan2(d_lon, d_lat) * 180.0/PI;
+					
+					HOME_DX = longitudeToMeters(d_lon);
+					HOME_DY = latitudeToMeters(d_lat);
+					
+					HOME_DIST = sqrt(HOME_DX*HOME_DX + HOME_DY*HOME_DY);
+				}
+				
+				_pos = 0;
+			}
+		break;
+	}
 }
 
 bool NEO6M::is_locked(float threshold) {
@@ -100,6 +139,15 @@ bool NEO6M::is_locked(float threshold) {
 
 bool NEO6M::is_locked(int threshold) {
 	return (H_ACCURACY > 0.0 && H_ACCURACY < ((float)threshold));
+}
+
+
+float NEO6M::latitudeToMeters(float dlat) {
+	return 111000.0 * dlat;
+}
+
+float NEO6M::longitudeToMeters(float dlon) {
+	return HOME_DX = 111000.0 * dlon * cos(LATITUDE * PI/180.0);
 }
 
 uint32_t NEO6M::readU4(byte * b) {
