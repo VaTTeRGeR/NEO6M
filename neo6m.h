@@ -33,7 +33,7 @@ class NEO6M {
 			HOME_DX = HOME_DY = HOME_DIST = 0.0;
 			HOME_ANGLE	= 0.0;
 
-			_home_set = 20;
+			_home_set = 4;
 			
 			_pos = 0;
 		}
@@ -48,7 +48,7 @@ class NEO6M {
 		int32_t	LAT_HOME_E7, LON_HOME_E7;
 		float	LAT_HOME, LON_HOME;
 		
-		float HOME_DX, HOME_DY, HOME_DIST, HOME_ANGLE;
+		float HOME_DX, HOME_DY, HOME_DIST, HOME_ANGLE, HOME_ANGLE_D;
 		
 		void setup();
 		void update();

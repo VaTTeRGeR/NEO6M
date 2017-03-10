@@ -22,7 +22,7 @@ void NEO6M::setup() {
 
 	delay(25);
   
-	byte nav5[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x07, 0x02, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4D, 0xDC};
+	byte nav5[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x0A, 0x01, 0x96, 0x00, 0x96, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x9D};
 	calcChecksum(&nav5[2], sizeof(nav5)-4);
 	sendUBX(&nav5[0], sizeof(nav5));
 
@@ -82,12 +82,21 @@ void NEO6M::update_parser(byte b) {
 				_data[_pos - POSLLH_DATA_BEGIN] = b;
 				_pos++;
 			} else {
-				LONGITUDE_E7	= readS4(_data + 4);					//Longitude						[deg*10e7]
-				LATITUDE_E7		= readS4(_data + 8);					//Latitude						[deg*10e7]
 				HEIGHT_OVER_SEA	= ((float)readU4(_data + 16))/1000.0;	//Height above mean sea-level	[m]
 				H_ACCURACY		= ((float)readU4(_data + 20))/1000.0;	//Horizontal accuracy			[m]
 				V_ACCURACY		= ((float)readU4(_data + 24))/1000.0;	//Vertical accuracy				[m]
 
+				int32_t lat_e7_tmp = LATITUDE_E7;
+				int32_t lon_e7_tmp = LONGITUDE_E7;
+				
+				LATITUDE_E7		= readS4(_data + 8);					//Latitude						[deg*10e7]
+				LONGITUDE_E7	= readS4(_data + 4);					//Longitude						[deg*10e7]
+				
+				bool changed = false;
+				if(LATITUDE_E7 != lat_e7_tmp || LONGITUDE_E7 != lon_e7_tmp) {
+					changed = true;
+				}
+				
 				float lat_tmp = LATITUDE;
 				float lon_tmp = LONGITUDE;
 				
@@ -99,8 +108,10 @@ void NEO6M::update_parser(byte b) {
 				
 				float speed_new = sqrt(lat_tmp*lat_tmp + lon_tmp*lon_tmp) * 4/*HZ*/ * 3.6; //[km/h]
 
-				SPEED = 0.25*SPEED + 0.75*speed_new;
-				ANGLE = atan2(lon_tmp, lat_tmp) * 180.0/PI;
+				if(_home_set == 0 && changed) {
+					SPEED = 0.5*SPEED + 0.5 * speed_new;
+					ANGLE = 0.5 *ANGLE +  0.5 * (atan2(lon_tmp, lat_tmp) * 180.0/PI);
+				}
 				
 				if(_home_set > 0 && is_locked(3.0)) {
 					if(LAT_HOME_E7 == 0 && LON_HOME_E7 == 0) {
@@ -115,11 +126,22 @@ void NEO6M::update_parser(byte b) {
 						
 						_home_set--;
 					}
-				} else if(_home_set == 0){
-					float d_lat = LATITUDE  - LAT_HOME;
-					float d_lon = LONGITUDE - LON_HOME;
+				} else if(_home_set == 0 && changed){
+					float d_lat = LAT_HOME - LATITUDE;
+					float d_lon = LON_HOME - LONGITUDE;
 					
 					HOME_ANGLE = atan2(d_lon, d_lat) * 180.0/PI;
+					
+					float angle_diff = HOME_ANGLE - ANGLE;
+					
+					float angle_diff_l = angle_diff;
+					float angle_diff_r = 360.0 - angle_diff;
+					
+					if(abs(angle_diff_l) <= abs(angle_diff_r)) {
+						HOME_ANGLE_D = angle_diff_l;
+					} else {
+						HOME_ANGLE_D = angle_diff_r;
+					}
 					
 					HOME_DX = longitudeToMeters(d_lon);
 					HOME_DY = latitudeToMeters(d_lat);
